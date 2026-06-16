@@ -2,26 +2,34 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Course extends Model
 {
-    // Mengizinkan kolom ini diisi data
-    protected $fillable = ['title', 'description', 'teacher_id'];
+    use HasFactory;
 
-    // Relasi: Setiap kelas (Course) dimiliki oleh satu pengajar (User)
+    protected $fillable = [
+        'title',
+        'description',
+        'teacher_id',
+    ];
+
+    // Relasi ke Dosen pembuat kelas
     public function teacher()
     {
         return $this->belongsTo(User::class, 'teacher_id');
     }
-    // Relasi Many-to-Many: Mahasiswa yang terdaftar di kelas ini
-    public function students()
-    {
-        return $this->belongsToMany(User::class, 'course_user');
-    }
-    // Relasi One-to-Many: Kelas ini memiliki banyak modul
+
+    // Relasi ke Materi/Modul
     public function modules()
     {
         return $this->hasMany(Module::class);
+    }
+
+    // Relasi ke Tugas/Assignment (Ini yang menyelesaikan error Anda)
+    public function assignments()
+    {
+        return $this->hasMany(Assignment::class);
     }
 }

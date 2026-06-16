@@ -1,76 +1,52 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\CourseController; 
-use App\Http\Controllers\ModuleController; // 1. Tambahan import ModuleController di sini
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\CourseController;
+use App\Http\Controllers\ModuleController;
+use App\Http\Controllers\DashboardController;
+use App\Models\Course; 
 use Illuminate\Support\Facades\Route;
-use App\Models\Course;
+use App\Http\Controllers\AssignmentController;
+use App\Http\Controllers\SubmissionController;
 
-// 1. Rute Halaman Utama (Welcome)
+// Halaman Utama (Landing Page)
 Route::get('/', function () {
-    $courses = [
-        [
-            'judul' => 'Pengantar Pemrograman Web', 
-            'pengajar' => 'Dimas Rizky', 
-            'deskripsi' => 'Mempelajari dasar routing, MVC, dan Blade.'
-        ],
-        [
-            'judul' => 'Machine Learning Fundamental', 
-            'pengajar' => 'Dimas Rizky', 
-            'deskripsi' => 'Implementasi algoritma Support Vector Machine dan ANN.'
-        ],
-        [
-            'judul' => 'Manajemen Basis Data', 
-            'pengajar' => 'Dimas Rizky', 
-            'deskripsi' => 'Merancang relasi tabel dan migrasi sistem.'
-        ]
-    ];
-
+    // Mengambil 6 kelas terbaru beserta data dosennya
+    $courses = Course::with('teacher')->latest()->take(6)->get();
+    
     return view('welcome', compact('courses'));
 });
 
-// 2. Rute Dashboard 
-Route::get('/dashboard', function () {
-    // Logika Khusus Dosen
-    if (Auth::user()->role === 'teacher') {
-        $courses = Course::where('teacher_id', Auth::id())->get();
-        return view('teacher.dashboard', compact('courses'));
-    }
+// Route Dashboard Mengarah ke Controller
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
 
-    // Logika Khusus Mahasiswa (Enrolled Courses + Available Courses)
-    /** @var \App\Models\User $user */
-    $user = Auth::user();
-    $myCourses = $user->enrolledCourses; 
-    $availableCourses = Course::with('teacher')->get(); 
-
-    return view('dashboard', compact('myCourses', 'availableCourses'));
-})->middleware(['auth', 'verified'])->name('dashboard');
-
-// 3. Rute Manajemen Profil
+// Route Group untuk Fitur yang Membutuhkan Login
 Route::middleware('auth')->group(function () {
+    // Manajemen Profil
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
 
-// 4. Rute Pendaftaran Kelas Mahasiswa 
-Route::middleware(['auth'])->group(function () {
-    Route::post('/courses/{course}/enroll', [CourseController::class, 'enroll'])->name('courses.enroll');
-});
-
-// 5. Rute khusus Dosen untuk manajemen kelas dan modul 
-Route::middleware(['auth', 'role:teacher'])->group(function () {
-    // CRUD Kelas
+    // Manajemen Kelas & Enrolment
     Route::post('/courses', [CourseController::class, 'store'])->name('courses.store');
     Route::get('/courses/{course}/edit', [CourseController::class, 'edit'])->name('courses.edit');
     Route::put('/courses/{course}', [CourseController::class, 'update'])->name('courses.update');
     Route::delete('/courses/{course}', [CourseController::class, 'destroy'])->name('courses.destroy');
+    Route::post('/courses/{course}/enroll', [CourseController::class, 'enroll'])->name('courses.enroll');
 
-    // 2. Manajemen Modul
-    Route::get('/courses/{course}/manage', [ModuleController::class, 'show'])->name('courses.manage');
+    // Manajemen Materi/Modul Di Dalam Kelas
+    Route::get('/courses/{course}', [ModuleController::class, 'show'])->name('modules.show');
     Route::post('/courses/{course}/modules', [ModuleController::class, 'store'])->name('modules.store');
+
+    Route::post('/courses/{course}/assignments', [AssignmentController::class, 'store'])->name('assignments.store');
+    // Manajemen Tugas & Pengumpulan
+    Route::post('/courses/{course}/assignments', [AssignmentController::class, 'store'])->name('assignments.store');
+    Route::get('/assignments/{assignment}', [AssignmentController::class, 'show'])->name('assignments.show');
+    Route::get('/assignments/{assignment}/submissions', [AssignmentController::class, 'submissions'])->name('assignments.submissions');
+    Route::post('/assignments/{assignment}/submit', [SubmissionController::class, 'store'])->name('submissions.store');
+    Route::post('/assignments/{assignment}/submit', [SubmissionController::class, 'store'])->name('submissions.store');
 });
 
-// 6. Rute Autentikasi Breeze
 require __DIR__.'/auth.php';

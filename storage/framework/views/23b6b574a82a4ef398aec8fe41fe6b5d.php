@@ -37,9 +37,10 @@
                                     <h4 class="font-bold text-lg text-gray-800"><?php echo e($course->title); ?></h4>
                                     <p class="text-sm text-gray-600 mt-2"><?php echo e(\Illuminate\Support\Str::limit($course->description, 80)); ?></p>
                                     <div class="mt-4 pt-4 border-t border-indigo-100">
-                                        <button class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md text-sm font-semibold opacity-75 cursor-not-allowed">
-                                            Masuk Kelas (Segera Hadir)
-                                        </button>
+                                        
+                                        <a href="<?php echo e(route('modules.show', $course->id)); ?>" class="block text-center w-full bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-semibold transition">
+                                            Masuk Kelas
+                                        </a>
                                     </div>
                                 </div>
                             <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>

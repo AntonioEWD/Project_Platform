@@ -9,20 +9,30 @@ use Illuminate\Support\Facades\Auth;
 
 class ModuleController extends Controller
 {
-    // Menampilkan halaman detail kelas beserta daftar materinya
     public function show(Course $course)
     {
-        // Pastikan hanya dosen pemilik yang bisa mengelola materinya
-        if ($course->teacher_id !== Auth::id()) {
-            abort(403, 'Akses Ditolak.');
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $isTeacher = $course->teacher_id === $user->id;
+        $isEnrolledStudent = $user->enrolledCourses()->where('courses.id', $course->id)->exists();
+
+        if (!$isTeacher && !$isEnrolledStudent) {
+            abort(403, 'Akses Ditolak. Anda belum terdaftar di kelas ini.');
         }
 
-        // Ambil semua modul kelas ini, urutkan dari yang terbaru
         $modules = $course->modules()->latest()->get();
-        return view('teacher.show-course', compact('course', 'modules'));
+        // INI YANG KURANG: Memanggil data tugas dari database
+        $assignments = $course->assignments()->latest()->get(); 
+        
+        // Mengirimkan data modules DAN assignments ke view
+        if ($user->role === 'student') {
+            return view('student.show-course', compact('course', 'modules', 'assignments'));
+        }
+
+        return view('teacher.show-course', compact('course', 'modules', 'assignments'));
     }
 
-    // Menyimpan file materi baru
     public function store(Request $request, Course $course)
     {
         if ($course->teacher_id !== Auth::id()) {
@@ -32,17 +42,14 @@ class ModuleController extends Controller
         $request->validate([
             'title' => 'required|string|max:255',
             'content' => 'nullable|string',
-            // Validasi file: pdf, doc, zip, ppt, dll (Maksimal 10MB)
             'file' => 'nullable|mimes:pdf,doc,docx,ppt,pptx,zip|max:10240', 
         ]);
 
         $filePath = null;
         if ($request->hasFile('file')) {
-            // Simpan ke folder public/modules
             $filePath = $request->file('file')->store('modules', 'public'); 
         }
 
-        // Buat data di database terkait kelas ini
         $course->modules()->create([
             'title' => $request->title,
             'content' => $request->content,
